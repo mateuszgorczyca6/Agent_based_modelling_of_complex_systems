@@ -59,5 +59,8 @@ class Fire:
 
         for n in range(N_probes):
             self.simulation()
-            if 3 in self.lattice[:, 0]:
+            if 3 in self.lattice[:, -1]:
                 self.fire_to_the_other_end_count += 1
+        self.fire_to_the_other_end_count /= N_probes
+
+        return self.fire_to_the_other_end_count
