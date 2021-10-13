@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from matplotlib import colors
 import imageio
 import os
+from itertools import product
 
 
 class Fire:
@@ -27,7 +28,7 @@ class Fire:
             for j in range(self.L):
                 if self.lattice[i, j] == 2:
                     for dx, dy in neighborhood:
-                        if 0 <= i + dx < self.L and j + dy >= 0 and j + dy < self.L:
+                        if 0 <= i + dx < self.L and 0 <= j + dy < self.L:
                             if self.lattice[i + dx, j + dy] == 1:
                                 self.lattice_copy[i + dx, j + dy] = 2
                     self.lattice_copy[i, j] = 3
@@ -69,6 +70,32 @@ class Fire:
         for i in filenames:
             os.remove(i)
 
+    def find_biggest_cluster(self):
+        largest_label = 0
+        label = np.zeros((self.L, self.L))
+        for P in product(range(self.L), repeat=2):
+            P_label = self.lattice[P[0]][P[1]]
+            L = (P[0]-1, P[1])
+            U = (P[0], P[1]-1)
+            if P_label == 3:
+                if L[0] >= 0 and self.lattice[L[0]][L[1]] == 3:
+                    L_label = label[L[0]][L[1]]
+                    if U[1] >= 0 and self.lattice[U[0]][U[1]] == 3:
+                        U_label = label[U[0]][U[1]]
+                        if not L_label == U_label:
+                            label[label == U_label] = L_label
+                        label[P[0]][P[1]] = L_label
+                    else:
+                        label[P[0]][P[1]] = L_label
+                elif U[1] >= 0 and self.lattice[U[0]][U[1]] == 3:
+                    U_label = label[U[0]][U[1]]
+                    label[P[0]][P[1]] = U_label
+                else:
+                    largest_label += 1
+                    label[P[0]][P[1]] = largest_label
+        return label
+        
+
     def do_MC(self, N_probes: int):
         """Creates N_probes of monte carlo simulation and returns probability that the fire will go to the other
         side of grid.
@@ -82,10 +109,13 @@ class Fire:
         > probability that the fire will go to the other side of a grid."""
 
         fire_to_the_other_end_count = 0
+        biggest_clusters = 0
         for n in range(N_probes):
             self.simulation()
             if 3 in self.lattice[:, -1]:
                 fire_to_the_other_end_count += 1
+                biggest_clusters += self.find_biggest_cluster()
         fire_to_the_other_end_count /= N_probes
+        biggest_clusters /= N_probes
 
-        return fire_to_the_other_end_count
+        return fire_to_the_other_end_count, biggest_clusters
