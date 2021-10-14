@@ -11,13 +11,17 @@ def help_func(args):
     return fire.do_MC(50)
 
 
-def plot_of_next_side(L: int):
+def plot_of_next_side(L: int, fname1: str = "plot1.pdf", fname2: str = "plot2.pdf"):
     """Function make 50 MC probes of burning forest and draw a plot with
     the chance of fire getting to other side by probability of tree spawn.
 
     :argument
     L: int
-    > the length of the side of the grid"""
+    > the length of the side of the grid
+    fname1: str
+    > name of chances plot
+    fname2: str
+    > name of average highest cluster plot"""
 
     # chances = []
     # clusters = []
@@ -72,11 +76,19 @@ def plot_of_next_side(L: int):
     clusters = [*clusters[:start], *clusters2, *clusters[stop:]]
 
     # plotting
+    plt.figure(figsize=(8,8))
     plt.plot(ps, chances, color="b")
     plt.plot(ps2, chances2, color="r")
+    plt.title('Probability that fire hits the opposite edge for different p')
+    plt.xlabel('p')
+    plt.ylabel('q') # q - fraction of simulations where fire hits the opposite edge
+    plt.savefig(fname1)
     plt.show()
+    plt.figure(figsize=(8,8))
     plt.plot(ps, clusters, color="b")
     plt.plot(ps2, clusters2, color="r")
+    plt.title('Average highest cluster of burnt trees for different p')
+    plt.xlabel('p')
+    plt.ylabel('Average highest cluster')
+    plt.savefig(fname2)
     plt.show()
-
-### to do -- add labels, visual of plot
