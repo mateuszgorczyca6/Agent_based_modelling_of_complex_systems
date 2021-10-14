@@ -75,16 +75,36 @@ def plot_of_next_side(L: int, fname1: str = "plot1.pdf", fname2: str = "plot2.pd
     chances = [*chances[:start], *chances2, *chances[stop:]]
     clusters = [*clusters[:start], *clusters2, *clusters[stop:]]
 
+    # add_MA
+    chances_toMA = np.array([0, 0, *chances2, 1, 1])
+    chances_MA = np.convolve(chances_toMA, np.ones(5), "valid") / 5
+
+    # getting biggest slope
+    chances_MA_max_diff = 0
+    chances_MA_max_diff_i = 0
+    for i in range(len(chances2)-1):
+        chances_MA_diff = chances_MA[i+1] - chances_MA[i]
+        if chances_MA_diff > chances_MA_max_diff:
+            chances_MA_max_diff = chances_MA_diff
+            chances_MA_max_diff_i = i
+    chances_MA_max_diff_p = (ps2[chances_MA_max_diff_i] + ps2[chances_MA_max_diff_i+1]) / 2
+    chances_MA_max_diff_chance = (chances2[chances_MA_max_diff_i] + chances2[chances_MA_max_diff_i+1]) / 2
+    ps2_diff = ps2[1] - ps2[0]
+
+    chances_MA_max_diff_p_star = chances_MA_max_diff_p - ps2_diff * chances_MA_max_diff_chance / chances_MA_max_diff
+
     # plotting
-    plt.figure(figsize=(8,8))
+    plt.figure(figsize=(12, 8))
     plt.plot(ps, chances, color="b")
     plt.plot(ps2, chances2, color="r")
+    plt.plot(ps2, chances_MA, color="g")
+    plt.plot([chances_MA_max_diff_p, chances_MA_max_diff_p_star], [chances_MA_max_diff_chance, 0], marker="*")
     plt.title('Probability that fire hits the opposite edge for different p')
     plt.xlabel('p')
     plt.ylabel('q') # q - fraction of simulations where fire hits the opposite edge
     plt.savefig(fname1)
     plt.show()
-    plt.figure(figsize=(8,8))
+    plt.figure(figsize=(12, 8))
     plt.plot(ps, clusters, color="b")
     plt.plot(ps2, clusters2, color="r")
     plt.title('Average highest cluster of burnt trees for different p')
@@ -92,3 +112,4 @@ def plot_of_next_side(L: int, fname1: str = "plot1.pdf", fname2: str = "plot2.pd
     plt.ylabel('Average highest cluster')
     plt.savefig(fname2)
     plt.show()
+    print("Max change os ")
