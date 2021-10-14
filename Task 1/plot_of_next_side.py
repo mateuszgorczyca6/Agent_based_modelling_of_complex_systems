@@ -105,7 +105,7 @@ def plot_of_next_side(L: int, fname1: str = "plot1.pdf", fname2: str = "plot2.pd
              0,
              "$p^*\\approx$" + " %.2f" % chances_MA_max_diff_p_star,
              verticalalignment='center', fontsize=12)
-    plt.title('Probability that fire hits the opposite edge for different p', fontsize=18)
+    plt.title('Probability that fire hits the opposite edge for different p\n L={}'.format(L), fontsize=18)
     plt.xlabel('p', fontsize=12)
     plt.ylabel('q', fontsize=12)  # q - fraction of simulations where fire hits the opposite edge
     plt.legend()
@@ -114,7 +114,7 @@ def plot_of_next_side(L: int, fname1: str = "plot1.pdf", fname2: str = "plot2.pd
     plt.figure(figsize=(12, 8))
     plt.plot(ps, clusters, color="b", label="normal precision")
     plt.plot(ps2, clusters2, color="r", label="higher precision")
-    plt.title('Average highest cluster of burnt trees for different p', fontsize=18)
+    plt.title('Average highest cluster of burnt trees for different p\n L={}'.format(L), fontsize=18)
     plt.xlabel('p', fontsize=12)
     plt.ylabel('Average highest cluster')
     plt.legend()
