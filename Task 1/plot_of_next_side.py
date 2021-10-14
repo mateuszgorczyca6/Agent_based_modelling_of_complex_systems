@@ -99,7 +99,7 @@ def plot_of_next_side(L: int, fname1: str = "plot1.pdf", fname2: str = "plot2.pd
     plt.plot(ps2, chances2, color="r")
     plt.plot(ps2, chances_MA, color="g")
     plt.plot([chances_MA_max_diff_p, chances_MA_max_diff_p_star], [chances_MA_max_diff_chance, 0], marker="*")
-    plt.title('Probability that fire hits the opposite edge for different p')
+    plt.title('Probability that fire hits the opposite edge for different p\n L={}'.format(L))
     plt.xlabel('p')
     plt.ylabel('q') # q - fraction of simulations where fire hits the opposite edge
     plt.savefig(fname1)
@@ -107,7 +107,7 @@ def plot_of_next_side(L: int, fname1: str = "plot1.pdf", fname2: str = "plot2.pd
     plt.figure(figsize=(12, 8))
     plt.plot(ps, clusters, color="b")
     plt.plot(ps2, clusters2, color="r")
-    plt.title('Average highest cluster of burnt trees for different p')
+    plt.title('Average highest cluster of burnt trees for different p\n L={}'.format(L))
     plt.xlabel('p')
     plt.ylabel('Average highest cluster')
     plt.savefig(fname2)
