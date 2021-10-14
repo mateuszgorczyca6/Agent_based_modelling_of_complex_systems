@@ -78,3 +78,5 @@ def plot_of_next_side(L: int):
     plt.plot(ps, clusters, color="b")
     plt.plot(ps2, clusters2, color="r")
     plt.show()
+
+### to do -- add labels, visual of plot
