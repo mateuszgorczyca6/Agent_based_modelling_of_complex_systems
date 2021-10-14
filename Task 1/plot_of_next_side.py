@@ -88,7 +88,7 @@ def plot_of_next_side(L: int, fname1: str = "plot1.pdf", fname2: str = "plot2.pd
             chances_MA_max_diff = chances_MA_diff
             chances_MA_max_diff_i = i
     chances_MA_max_diff_p = (ps2[chances_MA_max_diff_i] + ps2[chances_MA_max_diff_i+1]) / 2
-    chances_MA_max_diff_chance = (chances2[chances_MA_max_diff_i] + chances2[chances_MA_max_diff_i+1]) / 2
+    chances_MA_max_diff_chance = (chances_MA[chances_MA_max_diff_i] + chances_MA[chances_MA_max_diff_i+1]) / 2
     ps2_diff = ps2[1] - ps2[0]
 
     chances_MA_max_diff_p_star = chances_MA_max_diff_p - ps2_diff * chances_MA_max_diff_chance / chances_MA_max_diff
