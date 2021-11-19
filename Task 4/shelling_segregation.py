@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from matplotlib import colors
 import imageio
 import os
-import time
+import multiprocessing as mp
 
 
 class ShellingSegregation:
@@ -84,6 +84,16 @@ class ShellingSegregation:
                 return iteration, average_happiness, False
 
         return iteration, average_happiness, True
+
+    def monte_carlo(self, N, L, R, B, j_r, j_b, k):
+        avg_iteration, avg_average_happiness = 0, 0
+        for _ in range(N):
+            iteration, average_happiness, not_stopped = self.simulate(L, R, B, j_r, j_b, k)
+            avg_iteration = iteration / N
+            avg_average_happiness = average_happiness / N
+            if not not_stopped:
+                return avg_iteration, avg_average_happiness, False
+        return avg_iteration, avg_average_happiness, True
 
     @staticmethod
     def neighbors(arr, x, y, k):
