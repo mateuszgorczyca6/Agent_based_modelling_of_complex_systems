@@ -58,8 +58,13 @@ class ShellingSegregation:
             empty = lattice == 0
             places = np.logical_or(np.logical_or(unhappy_red, unhappy_blue), empty)
             values = lattice[places]
-            np.random.shuffle(values)
-            lattice[places] = values
+            if len(values)>1:
+                idxs = np.arange(len(values))
+                shuffler = np.random.permutation(len(values))
+                while np.any(idxs==shuffler):
+                    shuffler = np.random.permutation(len(values))
+            
+            lattice[places] = values[shuffler]
 
             if save_history:
                 self.lattice_list.append(lattice.copy())
@@ -141,7 +146,7 @@ def make_gif(fname, array_list, L, R, B, jr, jb, k):
         filenames.append(image_name)
         images.append(imageio.imread(image_name))
         plt.close()
-    imageio.mimsave(fname, images, fps=12)
+    imageio.mimsave(fname, images, fps=round(len(array_list)/15))
     for i in filenames:
         os.remove(i)
     print("Gif created")
