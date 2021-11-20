@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from matplotlib import colors
 import imageio
 import os
-import multiprocessing as mp
+from IPython.display import clear_output
 
 
 class ShellingSegregation:
@@ -12,14 +12,15 @@ class ShellingSegregation:
         self.iteration = 0
         self.average_happiness = 0
 
-    def simulate(self, L, R, B, j_r, j_b, k):
+    def simulate(self, L, R, B, j_r, j_b, k, save_history=True, value=None, MC_N=1):
         lattice = np.zeros(L * L)
         self.Js = []
         lattice[0:R] = 1
         lattice[R:B + R] = 2
         np.random.shuffle(lattice)
         lattice = lattice.reshape((L, L))
-        self.lattice_list.append(lattice.copy())
+        if save_history:
+            self.lattice_list = [lattice.copy()]
         J = np.zeros((L, L))
         for i in range(L):
             for j in range(L):
@@ -32,14 +33,15 @@ class ShellingSegregation:
                         same_type = np.sum(neighborhood == lattice[i, j]) - 1
                         J[i, j] = same_type / num_neighbors
         self.Js.append(J)
+        average_happiness = np.mean(J[lattice > 0])
+
         iteration = 0
 
         nochange_count = 0
         min_n_of_u_blue = L ** 2
         min_n_of_u_red = L ** 2
 
-        while np.logical_and(iteration < 1000, np.any(np.logical_or(np.logical_and(J < j_r, lattice == 1),
-                                                                    np.logical_and(J < j_b, lattice == 2)))):
+        while np.any(np.logical_or(np.logical_and(J < j_r, lattice == 1), np.logical_and(J < j_b, lattice == 2))):
             iteration += 1
             unhappy_red_map = np.logical_and(lattice == 1, J < j_r)
             unhappy_blue_map = np.logical_and(lattice == 2, J < j_b)
@@ -48,7 +50,8 @@ class ShellingSegregation:
             values = lattice[possible_map]
             np.random.shuffle(values)
             lattice[possible_map] = values
-            self.lattice_list.append(lattice.copy())
+            if save_history:
+                self.lattice_list.append(lattice.copy())
             average_happiness = np.mean(J[lattice > 0])
             self.Js.append(J)
 
@@ -74,21 +77,23 @@ class ShellingSegregation:
                 min_n_of_u_red = n_of_u_red
                 min_n_of_u_blue = n_of_u_blue
 
-            print(f"step: {iteration} min red: {np.min(J[lattice == 1])} ({n_of_u_red}), min blue:"
-                  f"{np.min(J[lattice == 2])} ({n_of_u_blue}), avg: {average_happiness}"
-                  f"{' no improve: ' + str(nochange_count) if nochange_count>0 else ''}")
+            clear_output()
+            if value is not None:
+                print("Value: " + str(value) + ", MC: " + str(MC_N))
+            print(f"step: {iteration}, unhappy red: {n_of_u_red}, unhappy blue: {n_of_u_blue}, avg: {average_happiness}"
+                  f"{', no improvement since ' + str(nochange_count) + ' steps' if nochange_count>0 else ''}")
 
             self.iteration = iteration
             self.average_happiness = average_happiness
-            if nochange_count == 10:
+            if nochange_count == 10 or iteration >= 1000:
                 return iteration, average_happiness, False
 
         return iteration, average_happiness, True
 
-    def monte_carlo(self, N, L, R, B, j_r, j_b, k):
+    def monte_carlo(self, N, L, R, B, j_r, j_b, k, save_history=True, value=None):
         avg_iteration, avg_average_happiness = 0, 0
-        for _ in range(N):
-            iteration, average_happiness, not_stopped = self.simulate(L, R, B, j_r, j_b, k)
+        for n in range(N):
+            iteration, average_happiness, not_stopped = self.simulate(L, R, B, j_r, j_b, k, save_history, value, n)
             avg_iteration = iteration / N
             avg_average_happiness = average_happiness / N
             if not not_stopped:
@@ -104,14 +109,15 @@ class ShellingSegregation:
 
 
 def make_gif(fname, array_list, L, R, B, jr, jb, k):
+    print("Creating gif...")
     cmap = colors.ListedColormap(['white', 'red', 'blue'])
     filenames = []
     images = []
     for i in range(len(array_list)):
-        plt.figure(figsize=(6, 6))
+        plt.figure(figsize=(8, 8))
         plt.imshow(array_list[i], cmap=cmap, vmin=0, vmax=2)
-        plt.title('Iteration number {}'.format(i))
-        plt.text(100, 20, 'L={}\n R={}\n B={}\n jr={}\n jb={}\n k={}'.format(L, R, B, jr, jb, k))
+        plt.title('Iteration number {}'.format(i), fontsize=18)
+        plt.text(100, 20, 'L={}\n R={}\n B={}\n jr={}\n jb={}\n k={}'.format(L, R, B, jr, jb, k), fontsize=12)
         image_name = 'graph{}.png'.format(i)
         plt.axis('off')
         plt.savefig(image_name)
@@ -121,4 +127,5 @@ def make_gif(fname, array_list, L, R, B, jr, jb, k):
     imageio.mimsave(fname, images, fps=12)
     for i in filenames:
         os.remove(i)
+    print("Gif created")
 
