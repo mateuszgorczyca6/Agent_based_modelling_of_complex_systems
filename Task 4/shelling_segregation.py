@@ -3,7 +3,10 @@ import matplotlib.pyplot as plt
 from matplotlib import colors
 import imageio
 import os
+from os.path import exists
 from IPython.display import clear_output
+from scipy import ndimage
+import json
 
 
 class ShellingSegregation:
@@ -12,90 +15,104 @@ class ShellingSegregation:
         self.iteration = 0
         self.average_happiness = 0
 
-    def simulate(self, L, R, B, j_r, j_b, k, save_history=True, value=None, MC_N=1):
-        lattice = np.zeros(L * L)
-        self.Js = []
+    def simulate(self, L, R, B, j_r, j_b, k, save_history=True, value=None, MC_N=1, verbose=2):
+        # starting setup
+        lattice = np.zeros(L ** 2).astype(int)
         lattice[0:R] = 1
         lattice[R:B + R] = 2
         np.random.shuffle(lattice)
-        lattice = lattice.reshape((L, L))
+        lattice = np.reshape(lattice, (L, L))
+
         if save_history:
             self.lattice_list = [lattice.copy()]
-        J = np.zeros((L, L))
-        for i in range(L):
-            for j in range(L):
-                if lattice[i, j] != 0:
-                    neighborhood = self.neighbors(lattice, i, j, k)
-                    num_neighbors = np.sum(neighborhood > 0) - 1
-                    if num_neighbors == 0:
-                        J[i, j] = 1  # isolated agent is happy
-                    else:
-                        same_type = np.sum(neighborhood == lattice[i, j]) - 1
-                        J[i, j] = same_type / num_neighbors
-        self.Js.append(J)
-        average_happiness = np.mean(J[lattice > 0])
 
-        iteration = 0
+        def happy(neighbours):
+            center = neighbours[k * (2 * k + 1) + k]
+            if center > 0:
+                num_all = np.sum(neighbours > 0) - 1
+                if num_all == 0:
+                    return 1
+                num_good = np.sum(neighbours == center) - 1
+                return num_good / num_all
+            else:
+                return 0
 
+        def get_J(lattice, j_r, j_b):
+            J = ndimage.generic_filter(lattice, happy, size=2 * k + 1, output=float, mode="wrap")
+            unhappy_red = np.logical_and(lattice == 1, J < j_r)
+            unhappy_blue = np.logical_and(lattice == 2, J < j_b)
+            return J, unhappy_red, unhappy_blue
+
+        J, unhappy_red, unhappy_blue = get_J(lattice, j_r, j_b)
+        n_unhappy_red = np.sum(unhappy_red)
+        n_unhappy_blue = np.sum(unhappy_blue)
+        avg_happiness = np.mean(J[lattice > 0])
+
+        step = 0
         nochange_count = 0
         min_n_of_u_blue = L ** 2
         min_n_of_u_red = L ** 2
 
-        while np.any(np.logical_or(np.logical_and(J < j_r, lattice == 1), np.logical_and(J < j_b, lattice == 2))):
-            iteration += 1
-            unhappy_red_map = np.logical_and(lattice == 1, J < j_r)
-            unhappy_blue_map = np.logical_and(lattice == 2, J < j_b)
-            empty_map = lattice == 0
-            possible_map = np.logical_or(np.logical_or(unhappy_blue_map, unhappy_red_map), empty_map)
-            values = lattice[possible_map]
+        while n_unhappy_red > 0 or n_unhappy_blue > 0:
+            # moving peoples
+            empty = lattice == 0
+            places = np.logical_or(np.logical_or(unhappy_red, unhappy_blue), empty)
+            values = lattice[places]
             np.random.shuffle(values)
-            lattice[possible_map] = values
+            lattice[places] = values
+
             if save_history:
                 self.lattice_list.append(lattice.copy())
-            average_happiness = np.mean(J[lattice > 0])
-            self.Js.append(J)
 
-            J = np.zeros((L, L))
-            for i in range(L):
-                for j in range(L):
-                    if lattice[i, j] != 0:
-                        neighborhood = self.neighbors(lattice, i, j, k)
-                        num_neighbors = np.sum(neighborhood > 0) - 1
-                        if num_neighbors == 0:
-                            J[i, j] = 1  # isolated agent is happy
-                        else:
-                            same_type = np.sum(neighborhood == lattice[i, j]) - 1
-                            J[i, j] = same_type / num_neighbors
+            J, unhappy_red, unhappy_blue = get_J(lattice, j_r, j_b)
+            n_unhappy_red = np.sum(unhappy_red)
+            n_unhappy_blue = np.sum(unhappy_blue)
+            avg_happiness = np.mean(J[lattice > 0])
 
-            n_of_u_blue = np.sum(unhappy_red_map)
-            n_of_u_red = np.sum(unhappy_blue_map)
+            # stopping when no improvement
+            step += 1
 
-            if n_of_u_red >= min_n_of_u_red and n_of_u_blue >= min_n_of_u_blue:
+            if n_unhappy_red >= min_n_of_u_red and n_unhappy_blue >= min_n_of_u_blue:
                 nochange_count += 1
             else:
                 nochange_count = 0
-                min_n_of_u_red = n_of_u_red
-                min_n_of_u_blue = n_of_u_blue
+                min_n_of_u_red = n_unhappy_red
+                min_n_of_u_blue = n_unhappy_blue
 
+            if verbose == 2 or (verbose == 1.5 and step % 10 == 0):
+                clear_output()
+                if value is not None:
+                    print("Value: " + str(value) + ", MC: " + str(MC_N))
+                print(f"step: {step}, unhappy red: {n_unhappy_red}, unhappy blue: {n_unhappy_blue}, "
+                      f"avg: {avg_happiness}"
+                      f"{', no improvement since ' + str(nochange_count) + ' steps' if nochange_count > 0 else ''}")
+
+            self.iteration = step
+            self.average_happiness = avg_happiness
+            if nochange_count == 10 or step >= 1000:
+                return step, avg_happiness, False
+
+        if verbose > 0:
             clear_output()
             if value is not None:
                 print("Value: " + str(value) + ", MC: " + str(MC_N))
-            print(f"step: {iteration}, unhappy red: {n_of_u_red}, unhappy blue: {n_of_u_blue}, avg: {average_happiness}"
-                  f"{', no improvement since ' + str(nochange_count) + ' steps' if nochange_count>0 else ''}")
+            print(f"step: {step}, unhappy red: {n_unhappy_red}, unhappy blue: {n_unhappy_blue}, "
+                  f"avg: {avg_happiness}"
+                  f"{', no improvement since ' + str(nochange_count) + ' steps' if nochange_count > 0 else ''}")
 
-            self.iteration = iteration
-            self.average_happiness = average_happiness
-            if nochange_count == 10 or iteration >= 1000:
-                return iteration, average_happiness, False
+        return step, avg_happiness, True
 
-        return iteration, average_happiness, True
-
-    def monte_carlo(self, N, L, R, B, j_r, j_b, k, save_history=True, value=None):
+    def monte_carlo(self, N, L, R, B, j_r, j_b, k, save_history=True, value=None, verbose=1.5):
         avg_iteration, avg_average_happiness = 0, 0
         for n in range(N):
-            iteration, average_happiness, not_stopped = self.simulate(L, R, B, j_r, j_b, k, save_history, value, n)
+            iteration, average_happiness, not_stopped = self.simulate(L, R, B, j_r, j_b, k, save_history, value, n,
+                                                                       verbose)
             avg_iteration = iteration / N
             avg_average_happiness = average_happiness / N
+            if verbose == 1:
+                clear_output()
+                if value is not None:
+                    print("Value: " + str(value) + ", MC: " + str(n))
             if not not_stopped:
                 return avg_iteration, avg_average_happiness, False
         return avg_iteration, avg_average_happiness, True
@@ -129,3 +146,37 @@ def make_gif(fname, array_list, L, R, B, jr, jb, k):
         os.remove(i)
     print("Gif created")
 
+
+def plot(segregation, nr, fname, MC_N, L, R, B, jr, jb, k, cont=False, verbose=1.5):
+    if exists(fname):
+        with open(fname) as f:
+            data = json.load(f)
+        Xs = data["Xs"]
+        Ys = data["Ys"]
+    if cont or not (exists(fname)):
+        if cont and exists(fname):
+            X = Xs[-1]
+        else:
+            Xs = []
+            Ys = []
+            X = 0
+        while X < {1: 10000, 2: 1, 3: 5}[nr]:
+            X += {1: 50, 2: 0.05, 3: 1}[nr]
+            if nr == 1:
+                Y, _, not_stopped = segregation.monte_carlo(MC_N, L, int(X / 2), int(X / 2), jr, jb, k, False, f"N={X}",
+                                                            verbose)
+            elif nr == 2:
+                _, Y, not_stopped = segregation.monte_carlo(MC_N, L, R, B, X, X, k, False, f"j_r=j_b={X}", verbose)
+            elif nr == 3:
+                _, Y, not_stopped = segregation.monte_carlo(MC_N, L, R, B, jr, jb, X, False, f"k={X}", verbose)
+            if not not_stopped:
+                break
+            Xs.append(X)
+            Ys.append(Y)
+
+            data = {"Xs": Xs, "Ys": Ys}
+
+            with open(fname, "w") as f:
+                json.dump(data, f)
+
+    plt.plot(Xs, Ys)
