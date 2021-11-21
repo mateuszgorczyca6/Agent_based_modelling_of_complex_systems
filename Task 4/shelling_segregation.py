@@ -128,7 +128,7 @@ class ShellingSegregation:
                 avg_average_happiness += average_happiness / N
 
             if stopped_in_the_row == 5:
-                return avg_iteration, avg_average_happiness, True
+                return avg_iteration, avg_average_happiness, False
 
         return avg_iteration, avg_average_happiness, True
 
