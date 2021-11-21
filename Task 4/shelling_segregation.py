@@ -109,17 +109,27 @@ class ShellingSegregation:
 
     def monte_carlo(self, N, L, R, B, j_r, j_b, k, save_history=True, value=None, verbose=1.5):
         avg_iteration, avg_average_happiness = 0, 0
-        for n in range(N):
+        n = 0
+        stopped_in_the_row = 0
+        while n < N:
             iteration, average_happiness, not_stopped = self.simulate(L, R, B, j_r, j_b, k, save_history, value, n,
                                                                        verbose)
-            avg_iteration += iteration / N
-            avg_average_happiness += average_happiness / N
             if verbose == 1:
                 clear_output()
                 if value is not None:
                     print("Value: " + str(value) + ", MC: " + str(n))
+            n += 1
             if not not_stopped:
-                return avg_iteration, avg_average_happiness, False
+                stopped_in_the_row += 1
+                n -= 1
+            else:
+                stopped_in_the_row = 0
+                avg_iteration += iteration / N
+                avg_average_happiness += average_happiness / N
+
+            if stopped_in_the_row == 5:
+                return avg_iteration, avg_average_happiness, True
+
         return avg_iteration, avg_average_happiness, True
 
     @staticmethod
