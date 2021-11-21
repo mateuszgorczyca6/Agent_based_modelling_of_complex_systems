@@ -112,8 +112,8 @@ class ShellingSegregation:
         for n in range(N):
             iteration, average_happiness, not_stopped = self.simulate(L, R, B, j_r, j_b, k, save_history, value, n,
                                                                        verbose)
-            avg_iteration = iteration / N
-            avg_average_happiness = average_happiness / N
+            avg_iteration += iteration / N
+            avg_average_happiness += average_happiness / N
             if verbose == 1:
                 clear_output()
                 if value is not None:
