@@ -195,9 +195,9 @@ def plot(segregation, nr, fname, MC_N, L, R, B, jr, jb, k, cont=False, verbose=1
             with open(fname, "w") as f:
                 json.dump(data, f)
 
-    title = {1: "Plot of number of steps to number of agents",
-             2: "Plot of final segregation index by minimal required segregation",
-             3: "Plot of final segregation index by layers of neighbourhood"}[nr]
+    title = {1: "Number of steps to number of agents",
+             2: "Final segregation index by minimal required segregation",
+             3: "Final segregation index by layers of neighbourhood"}[nr]
     xtitle = {1: "$N$", 2: "$j_r=j_b$", 3: "$k$"}[nr]
     ytitle = {1: "# steps", 2: "final segregation", 3: "final segregation"}[nr]
     fname = {1: "iteration_N.png", 2: "segregation_j.png", 3: "segregation_k.png"}[nr]
