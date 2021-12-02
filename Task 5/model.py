@@ -76,7 +76,7 @@ images_info = {
 }
 
 
-def plot_history(model, fname: str, rectangles=False):
+def plot_history(model, fname: str, title: str, rectangles=False):
     def draw_image(x, y, nr):
         imagebox = OffsetImage(images_info[nr]["img"], zoom=images_info[nr]["zoom"])
         ab = AnnotationBbox(imagebox, (x, y), frameon=False)
@@ -85,7 +85,7 @@ def plot_history(model, fname: str, rectangles=False):
     filenames = []
     images = []
     for t, flashback in enumerate(model.history):
-        _, ax = plt.subplots(figsize=(30, 0.3), facecolor="white")
+        fig, ax = plt.subplots(figsize=(30, 0.8), facecolor="white")
         car_pos = np.array(np.where(flashback != 0)).T
         for pos in car_pos:
             if rectangles:
@@ -101,18 +101,21 @@ def plot_history(model, fname: str, rectangles=False):
                 plt.draw()
         plt.xticks([i - 0.5 for i in range(model.road_len + 2)], color="white")
         plt.yticks([-0.5, 0.5], color="white")
+        plt.title(title + f"; t = {t}", fontsize=22)
         plt.xlim(-0.5, model.road_len - 0.5)
         plt.ylim(-0.5, 0.5)
         plt.grid(color="black")
         plt.draw()
+        fig.subplots_adjust(top=0.5)
+
         image_name = f"time{t}.png"
         filenames.append(image_name)
         plt.savefig(image_name)
         images.append(imageio.imread(image_name))
         plt.close()
 
-    speed_fname = "".join([fname.split(".")[0], "_fast.", fname.split(".")[1]])
-    imageio.mimsave(fname, images, fps=2)
+    speed_fname = "".join([fname, "_fast.gif"])
+    imageio.mimsave("".join([fname, ".gif"]), images, fps=2)
     imageio.mimsave(speed_fname, images, fps=10)
     for i in filenames:
         os.remove(i)
