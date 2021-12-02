@@ -6,6 +6,7 @@ from PIL import Image
 import imageio
 import os
 from matplotlib.offsetbox import OffsetImage, AnnotationBbox
+from matplotlib.patches import Rectangle
 
 
 class Car:
@@ -68,13 +69,14 @@ class Nagel_Schreckenberg_model:
 
 
 images_info = {
-    0: {"img": Image.open("cars/car1.png"), "zoom": 0.15},
-    1: {"img": Image.open("cars/car2.png"), "zoom": 0.15},
-    2: {"img": Image.open("cars/car3.png"), "zoom": 0.15}
+    0: {"img": Image.open("cars/car1.png"), "zoom": 0.15, "color": "r"},
+    1: {"img": Image.open("cars/car2.png"), "zoom": 0.15, "color": "b"},
+    2: {"img": Image.open("cars/car3.png"), "zoom": 0.15, "color": "g"},
+    3: {"img": Image.open("cars/car4.png"), "zoom": 0.15, "color": "pink"}
 }
 
 
-def plot_history(self, fname: str):
+def plot_history(model, fname: str, rectangles=False):
     def draw_image(x, y, nr):
         imagebox = OffsetImage(images_info[nr]["img"], zoom=images_info[nr]["zoom"])
         ab = AnnotationBbox(imagebox, (x, y), frameon=False)
@@ -82,14 +84,24 @@ def plot_history(self, fname: str):
 
     filenames = []
     images = []
-    for t, flashback in enumerate(self.history):
+    for t, flashback in enumerate(model.history):
         _, ax = plt.subplots(figsize=(30, 0.3), facecolor="white")
         car_pos = np.array(np.where(flashback != 0)).T
         for pos in car_pos:
-            draw_image(pos[0], 0, self.history[t, pos[0]].nr)
-        plt.xticks([i - 0.5 for i in range(self.road_len + 2)], color="white")
+            if rectangles:
+                ax.add_patch(Rectangle(
+                    (pos[0]-0.5, -0.5),
+                    1,
+                    1,
+                    edgecolor="black",
+                    facecolor=images_info[model.history[t, pos[0]].nr]["color"],
+                    lw=0))
+            else:
+                draw_image(pos[0], 0, model.history[t, pos[0]].nr)
+                plt.draw()
+        plt.xticks([i - 0.5 for i in range(model.road_len + 2)], color="white")
         plt.yticks([-0.5, 0.5], color="white")
-        plt.xlim(-0.5, self.road_len - 0.5)
+        plt.xlim(-0.5, model.road_len - 0.5)
         plt.ylim(-0.5, 0.5)
         plt.grid(color="black")
         plt.draw()
@@ -98,6 +110,9 @@ def plot_history(self, fname: str):
         plt.savefig(image_name)
         images.append(imageio.imread(image_name))
         plt.close()
-    imageio.mimsave(fname, images, fps=round(len(self.history) / 15))
+
+    speed_fname = "".join([fname.split(".")[0], "_fast.", fname.split(".")[1]])
+    imageio.mimsave(fname, images, fps=2)
+    imageio.mimsave(speed_fname, images, fps=10)
     for i in filenames:
         os.remove(i)
