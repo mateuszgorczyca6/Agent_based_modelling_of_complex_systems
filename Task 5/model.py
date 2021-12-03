@@ -7,6 +7,8 @@ import imageio
 import os
 from matplotlib.offsetbox import OffsetImage, AnnotationBbox
 from matplotlib.patches import Rectangle
+from os.path import exists
+import pandas as pd
 
 
 class Car:
@@ -67,6 +69,21 @@ class Nagel_Schreckenberg_model:
         self.road = new_road.copy()
         self.road_logic = self.road != 0
 
+    def mc_average_velocity(self, MC_N: int):
+        avg_vel = 0
+        for _ in range(MC_N):
+            self.simulate(100)
+            avg_vel += self.calc_average_velocity()
+        avg_vel /= MC_N
+        return avg_vel
+
+    def calc_average_velocity(self):
+        avg_vel = self.history[self.history != 0]
+        if avg_vel.size == 0:
+            return 0
+        avg_vel = map(lambda car: car.velocity, avg_vel)
+        return np.array(list(avg_vel)).mean()
+
 
 images_info = {
     0: {"img": Image.open("cars/car1.png"), "zoom": 0.15, "color": "r"},
@@ -90,7 +107,7 @@ def plot_history(model, fname: str, title: str, rectangles=False):
         for pos in car_pos:
             if rectangles:
                 ax.add_patch(Rectangle(
-                    (pos[0]-0.5, -0.5),
+                    (pos[0] - 0.5, -0.5),
                     1,
                     1,
                     edgecolor="black",
@@ -119,3 +136,33 @@ def plot_history(model, fname: str, title: str, rectangles=False):
     imageio.mimsave(speed_fname, images, fps=10)
     for i in filenames:
         os.remove(i)
+
+
+def mc_average_velocity_array(ps: list, rhos: list, MC_N: int, gif_plot: bool = True):
+    average_velocity = np.zeros((3, 3))
+    for i, p in enumerate(ps):
+        for j, rho in enumerate(rhos):
+            model = Nagel_Schreckenberg_model(p, rho, 100)
+            average_velocity[i][j] = model.mc_average_velocity(MC_N)
+            print(f"Done: p = {p}, rho = {rho}")
+
+            fname = f"base__p_{p}__rho_{rho}.gif"
+            if gif_plot and not exists(fname):
+                plot_history(model, f"base__p_{p}__rho_{rho}", f"Road simulation; p = {p}; rho = {rho}")
+
+    average_velocity = pd.DataFrame(average_velocity, index=map_str(ps, "p = "), columns=rhos).transpose()
+    return average_velocity
+
+
+def map_str(array, string):
+    return list(map(lambda x: "".join((string, str(x))), array))
+
+
+def plot_avg_velocity(average_velocity: np.ndarray, fname: str = "average_velocity.png"):
+    ax = average_velocity.plot(figsize=(12, 8))
+    ax.set_xlabel(r"$\rho$", fontsize=14)
+    ax.set_ylabel("average velocity", fontsize=14)
+    ax.set_title(r"Avg. velocity vs slowdown probability", fontsize=18)
+    ax.legend(fontsize=14)
+    plt.savefig(fname)
+    plt.close()
