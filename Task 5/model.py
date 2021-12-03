@@ -26,6 +26,9 @@ class Car:
 
     def __repr__(self):
         return f"Car({self.velocity})"
+    
+    def __int__(self):
+        return int(self.velocity)
 
 
 class Nagel_Schreckenberg_model:
@@ -81,8 +84,7 @@ class Nagel_Schreckenberg_model:
         avg_vel = self.history[self.history != 0]
         if avg_vel.size == 0:
             return 0
-        avg_vel = map(lambda car: car.velocity, avg_vel)
-        return np.array(list(avg_vel)).mean()
+        return avg_vel.astype(int).mean()
 
 
 images_info = {
