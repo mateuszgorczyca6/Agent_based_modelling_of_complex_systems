@@ -141,7 +141,7 @@ def plot_history(model, fname: str, title: str, rectangles=False):
 
 
 def mc_average_velocity_array(ps: list, rhos: list, MC_N: int, gif_plot: bool = True):
-    average_velocity = np.zeros((3, 3))
+    average_velocity = np.zeros((len(ps), len(rhos)))
     for i, p in enumerate(ps):
         for j, rho in enumerate(rhos):
             model = Nagel_Schreckenberg_model(p, rho, 100)
@@ -164,7 +164,7 @@ def plot_avg_velocity(average_velocity: np.ndarray, fname: str = "average_veloci
     ax = average_velocity.plot(figsize=(12, 8))
     ax.set_xlabel(r"$\rho$", fontsize=14)
     ax.set_ylabel("average velocity", fontsize=14)
-    ax.set_title(r"Avg. velocity vs slowdown probability", fontsize=18)
+    ax.set_title(r"Avg. velocity vs density of cars", fontsize=18)
     ax.legend(fontsize=14)
     plt.savefig(fname)
     plt.close()
