@@ -1,3 +1,5 @@
+from typing import List, Union, Optional
+
 import networkx as nx
 import numpy as np
 
@@ -9,30 +11,59 @@ from matplotlib.lines import Line2D
 
 
 class SituationQVoters:
-    influence_modes = ['no influence', 'independent, changed', 'independent, unchanged', 'conformist, changed',
-                       'conformist, unchanged']
+    """Q-Voter Situation Simulation Model class.
+
+    :params:
+    influence_modes: text repr of all influence types"""
+    influence_modes: list[str] = ['no influence', 'independent, changed', 'independent, unchanged',
+                                  'conformist, changed',
+                                  'conformist, unchanged']
 
     def __init__(self, n: int = 100, m: int = 5, graph: nx.Graph = None, p: float = 0.5, f: float = 0.5):
+        """
+        Init function of SituationQVoters. Creates graph and initial opinions.
+
+        Parameters
+        ----------
+        n - number of Nodes in Barabashi-Albert graph, used if graph is None (default: None)
+        m - number of new edges on new Barabashi-Albert graph, used if graph is None (default: None)
+        graph - graph on which the model is simulated, if None, then Barabashi-Albert graph will be generated \
+        (default: None)
+        p - probability of spinson react independently
+        f - probability of spinson change of mind, when reacting independently
+        """
         self.f = f
         self.p = p
         self.Graph = self.__get_graph(graph, n, m)
         self.opinions = self.__get_states()
-        self.history = []
 
     @staticmethod
     def __get_graph(graph, n, m) -> nx.Graph:
+        """Set's initial graph of simulation"""
         if isinstance(graph, nx.Graph):
             graph = graph
         else:
             graph = nx.barabasi_albert_graph(n, m)
         return graph
 
-    def __get_states(self):
+    def __get_states(self) -> dict[any: bool]:
+        """Set's initial opinions of spinsons"""
         n = len(self.Graph.nodes)
         opinions = np.random.binomial(1, 0.5, n).astype(bool)
         return dict(zip(self.Graph.nodes, opinions))
 
-    def step(self):
+    def step(self) -> (np.ndarray, str, np.ndarray, any, bool, bool):
+        """Move simulation by one step.
+
+        Returns
+        -------
+        group - list of labels of 4 connected nodes
+        influence - type of influence that happened during this step
+        neighbors - neighbours of group
+        victim - node on which influence is made
+        opinion_before - opinion of victim before influence
+        opinion_after - opinion of node after influence
+        """
         group = self.__find_4_connected()
         trueness = self.__level_of_trueness(group)
         if trueness % 4 == 0:
@@ -41,8 +72,11 @@ class SituationQVoters:
             influence = self.influence_modes[0]
             return group, influence, None, None, None, None
 
-    def __find_4_connected(self):
-        def get_nodes():
+    def __find_4_connected(self) -> np.ndarray:
+        """Returns group of 4 connected nodes."""
+
+        def get_nodes() -> np.ndarray:
+            """Returns nodes in form of numpy array."""
             return np.array([np.random.choice(self.Graph.nodes)])
 
         nodes = get_nodes()
@@ -53,21 +87,28 @@ class SituationQVoters:
                 nodes = np.append(nodes, np.random.choice(neighbors))
         return nodes
 
-    def __level_of_trueness(self, nodes: np.ndarray):
+    def __level_of_trueness(self, nodes: np.ndarray) -> int:
+        """Calculates number of true opinions for given nodes."""
         opinions = 0
         for node in nodes:
             opinions += int(self.opinions[node])
         return opinions
 
-    def __make_influence(self, group, trueness):
-        def change_opinion(chosen_victim, trueness):
-            def independent_behaviour(victim):
+    def __make_influence(self, group: np.ndarray, trueness: int) -> (np.ndarray, str, np.ndarray, any, bool, bool):
+        """Applies influence on ."""
+
+        def change_opinion(chosen_victim: any, trueness: int) -> str:
+            """Change opinion of victim depending on random behaviour and group trueness."""
+
+            def independent_behaviour(victim: any) -> str:
+                """Change opinion of victim when it behaves independent."""
                 if np.random.random() < self.f:  # change opinion
                     self.opinions[victim] = not self.opinions[victim]
                     return self.influence_modes[1]
                 return self.influence_modes[2]
 
-            def conformist_behaviour(victim, trueness):
+            def conformist_behaviour(victim: any, trueness: int) -> str:
+                """Change opinion of victim when it behaves conformist depending on trueness."""
                 new_opinion = bool(floor(trueness / 4))
                 if self.opinions[victim] != new_opinion:
                     self.opinions[victim] = new_opinion
@@ -79,7 +120,8 @@ class SituationQVoters:
             else:  # conformist
                 return conformist_behaviour(chosen_victim, trueness)
 
-        def get_neighbours(nodes: np.ndarray):
+        def get_neighbours(nodes: np.ndarray) -> np.ndarray:
+            """Gets neighbourhood of group of nodes."""
             neighbours_of_group = np.array([])
 
             for node in nodes:
@@ -99,6 +141,12 @@ class SituationQVoters:
 
 
 def save_all_influences(model: SituationQVoters):
+    """Saves to file and plot all types of influences that are implemented in model.
+
+    Parameters
+    ----------
+    model - model to process
+    """
     influence_gained = []
     step = 0
     while len(influence_gained) < len(model.influence_modes):
@@ -109,10 +157,23 @@ def save_all_influences(model: SituationQVoters):
         if influence not in influence_gained:
             influence_gained.append(influence)
 
-            __draw_graph(found, influence, neighbors, model, opinion_after, opinion_before, step, victim)
+            __draw_graph(model, found, influence, neighbors, victim, opinion_before, opinion_after, step)
 
 
-def __draw_graph(found, influence, neighbors, model, opinion_after, opinion_before, step, victim):
+def __draw_graph(model, found, influence, neighbors, victim, opinion_before, opinion_after, step):
+    """Draws a graph of model for given arguments.
+
+    Parameters
+    ----------
+    model - model to process
+    found - 4 connected nodes, which influence on victim
+    influence - type of influence on this step
+    neighbors - neightbours of found nodes
+    opinion_before - opinion of victim before influence
+    opinion_after - opinion of victim after influence
+    step - step number
+    victim - victim node
+    """
     def colour_nodes(item):
         if influence != model.influence_modes[0] and item in neighbors:
             if model.opinions[item]:
