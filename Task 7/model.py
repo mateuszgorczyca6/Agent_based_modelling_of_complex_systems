@@ -1,8 +1,9 @@
+import networkx as nx
+import numpy as np
+
 from itertools import pairwise
 from math import floor
 
-import networkx as nx
-import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.lines import Line2D
 
@@ -32,34 +33,19 @@ class SituationQVoters:
         return dict(zip(self.Graph.nodes, opinions))
 
     def step(self):
-        group = self.find_4_connected()
-        trueness = self.level_of_trueness(group)
+        group = self.__find_4_connected()
+        trueness = self.__level_of_trueness(group)
         if trueness % 4 == 0:
-            neighbors = self.get_neightbours(group)
-            victim = np.random.choice(neighbors)
-            opinion_before = self.opinions[victim].copy()
-            influence = self.change_opinion(victim, trueness)
-            opinion_after = self.opinions[victim]
-            return group, influence, neighbors, victim, opinion_before, opinion_after
+            return self.__make_influence(group, trueness)
         else:
             influence = self.influence_modes[0]
             return group, influence, None, None, None, None
 
-    def change_opinion(self, chosen_victim, trueness):
-        if np.random.random() < self.p:  # independent
-            if np.random.random() < self.f:  # change opinion
-                self.opinions[chosen_victim] = not self.opinions[chosen_victim]
-                return self.influence_modes[1]
-            return self.influence_modes[2]
-        else:  # conformist
-            new_opinion = bool(floor(trueness / 4))
-            if self.opinions[chosen_victim] != new_opinion:
-                self.opinions[chosen_victim] = new_opinion
-                return self.influence_modes[3]
-            return self.influence_modes[4]
+    def __find_4_connected(self):
+        def get_nodes():
+            return np.array([np.random.choice(self.Graph.nodes)])
 
-    def find_4_connected(self):
-        nodes = np.array([np.random.choice(self.Graph.nodes)])
+        nodes = get_nodes()
         for _ in range(3):
             neighbors = np.array(list(self.Graph.neighbors(nodes[-1])))
             neighbors = np.setdiff1d(neighbors, nodes)
@@ -67,25 +53,52 @@ class SituationQVoters:
                 nodes = np.append(nodes, np.random.choice(neighbors))
         return nodes
 
-    def level_of_trueness(self, nodes: np.ndarray):
+    def __level_of_trueness(self, nodes: np.ndarray):
         opinions = 0
         for node in nodes:
             opinions += int(self.opinions[node])
         return opinions
 
-    def get_neightbours(self, nodes: np.ndarray):
-        neighbours_of_group = np.array([])
+    def __make_influence(self, group, trueness):
+        def change_opinion(chosen_victim, trueness):
+            def independent_behaviour(victim):
+                if np.random.random() < self.f:  # change opinion
+                    self.opinions[victim] = not self.opinions[victim]
+                    return self.influence_modes[1]
+                return self.influence_modes[2]
 
-        for node in nodes:
-            neighbours_of_node = np.array(list(self.Graph.neighbors(node)))
-            neighbours_of_group = np.append(neighbours_of_group, neighbours_of_node)
+            def conformist_behaviour(victim, trueness):
+                new_opinion = bool(floor(trueness / 4))
+                if self.opinions[victim] != new_opinion:
+                    self.opinions[victim] = new_opinion
+                    return self.influence_modes[3]
+                return self.influence_modes[4]
 
-        neighbours_of_group = np.unique(neighbours_of_group)
-        neighbours_of_group = np.setdiff1d(neighbours_of_group, nodes)
-        return neighbours_of_group
+            if np.random.random() < self.p:  # independent
+                return independent_behaviour(chosen_victim)
+            else:  # conformist
+                return conformist_behaviour(chosen_victim, trueness)
+
+        def get_neighbours(nodes: np.ndarray):
+            neighbours_of_group = np.array([])
+
+            for node in nodes:
+                neighbours_of_node = np.array(list(self.Graph.neighbors(node)))
+                neighbours_of_group = np.append(neighbours_of_group, neighbours_of_node)
+
+            neighbours_of_group = np.unique(neighbours_of_group)
+            neighbours_of_group = np.setdiff1d(neighbours_of_group, nodes)
+            return neighbours_of_group
+
+        neighbors = get_neighbours(group)
+        victim = np.random.choice(neighbors)
+        opinion_before = self.opinions[victim]
+        influence = change_opinion(victim, trueness)
+        opinion_after = self.opinions[victim]
+        return group, influence, neighbors, victim, opinion_before, opinion_after
 
 
-def save_all_influences(model):
+def save_all_influences(model: SituationQVoters):
     influence_gained = []
     step = 0
     while len(influence_gained) < len(model.influence_modes):
@@ -96,56 +109,60 @@ def save_all_influences(model):
         if influence not in influence_gained:
             influence_gained.append(influence)
 
-            def colour_nodes(item):
-                if influence != model.influence_modes[0] and item in neighbors:
-                    if model.opinions[item]:
-                        return "lightgreen"
-                    return "pink"
-                if item in found:
-                    if model.opinions[item]:
-                        return "green"
-                    return "red"
-                return "gray"
+            __draw_graph(found, influence, neighbors, model, opinion_after, opinion_before, step, victim)
 
-            def resize_nodes(item):
-                if item == victim:
-                    return 500
-                if item in found:
-                    return 500
-                return 100
 
-            def colour_edges(item):
-                if item in pairwise(found):
-                    return "red"
-                if item in pairwise(reversed(found)):
-                    return "red"
-                return "black"
+def __draw_graph(found, influence, neighbors, model, opinion_after, opinion_before, step, victim):
+    def colour_nodes(item):
+        if influence != model.influence_modes[0] and item in neighbors:
+            if model.opinions[item]:
+                return "lightgreen"
+            return "pink"
+        if item in found:
+            if model.opinions[item]:
+                return "green"
+            return "red"
+        return "gray"
 
-            colors_nodes = list(map(colour_nodes, model.Graph.nodes))
-            sizes_nodes = list(map(resize_nodes, model.Graph.nodes))
-            colors_edges = list(map(colour_edges, model.Graph.edges))
-            _, ax = plt.subplots(figsize=(10, 5))
-            nx.draw(model.Graph, with_labels=True, node_color=colors_nodes, node_size=sizes_nodes,
-                    edge_color=colors_edges, ax=ax)
+    def resize_nodes(item):
+        if item == victim:
+            return 500
+        if item in found:
+            return 500
+        return 100
 
-            def legend_node(color, label):
-                return Line2D([0], [0], marker='o', color=color, markerfacecolor=color, markersize=15,
-                              label=label, linewidth=0)
+    def colour_edges(item):
+        if item in pairwise(found):
+            return "red"
+        if item in pairwise(reversed(found)):
+            return "red"
+        return "black"
 
-            legend_elements = [legend_node('gray', 'unselected'),
-                               legend_node('red', 'selected, disagree'),
-                               legend_node('green', 'selected, agree'),
-                               legend_node('pink', 'neigtbour, disagree'),
-                               legend_node('lightgreen', 'neighbour, agree'),
-                               Line2D([0], [0], color='red', label='selected connection', linewidth=1)]
-            plt.legend(handles=legend_elements)
-            agreement = model.level_of_trueness(found)
-            title = f'step: {step}, selected: {found}, influence: {influence}'
-            if influence != "no influence":
-                title += f', victim: {victim}, opinion: {opinion_before} ' + r'$\rightarrow$' + f' {opinion_after}'
-            ax.set_title(title)
-            plt.savefig(influence + '.pdf')
-            plt.show()
+    def legend_node(color, label):
+        return Line2D([0], [0], marker='o', color=color, markerfacecolor=color, markersize=15,
+                      label=label, linewidth=0)
+
+    colors_nodes = list(map(colour_nodes, model.Graph.nodes))
+    sizes_nodes = list(map(resize_nodes, model.Graph.nodes))
+    colors_edges = list(map(colour_edges, model.Graph.edges))
+    _, ax = plt.subplots(figsize=(10, 5))
+    nx.draw(model.Graph, with_labels=True, node_color=colors_nodes, node_size=sizes_nodes,
+            edge_color=colors_edges, ax=ax)
+
+    legend_elements = [legend_node('gray', 'unselected'),
+                       legend_node('red', 'selected, disagree'),
+                       legend_node('green', 'selected, agree'),
+                       legend_node('pink', 'neigtbour, disagree'),
+                       legend_node('lightgreen', 'neighbour, agree'),
+                       Line2D([0], [0], color='red', label='selected connection', linewidth=1)]
+
+    plt.legend(handles=legend_elements)
+    title = f'step: {step}, selected: {found}, influence: {influence}'
+    if influence != "no influence":
+        title += f', victim: {victim}, opinion: {opinion_before} ' + r'$\rightarrow$' + f' {opinion_after}'
+    ax.set_title(title)
+    plt.savefig(influence + '.pdf')
+    plt.show()
 
 
 if __name__ == "__main__":
