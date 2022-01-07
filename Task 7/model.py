@@ -95,7 +95,7 @@ class SituationQVoters:
         return opinions
 
     def __make_influence(self, group: np.ndarray, trueness: int) -> (np.ndarray, str, np.ndarray, any, bool, bool):
-        """Applies influence on ."""
+        """Applies influence on victim node."""
 
         def change_opinion(chosen_victim: any, trueness: int) -> str:
             """Change opinion of victim depending on random behaviour and group trueness."""
