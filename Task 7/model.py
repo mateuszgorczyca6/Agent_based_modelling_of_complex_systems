@@ -12,7 +12,6 @@ from matplotlib.lines import Line2D
 
 class SituationQVoters:
     """Q-Voter Situation Simulation Model class.
-
     :params:
     influence_modes: text repr of all influence types"""
     influence_modes: list[str] = ['no influence', 'independent, changed', 'independent, unchanged',
@@ -22,7 +21,6 @@ class SituationQVoters:
     def __init__(self, n: int = 100, m: int = 5, graph: nx.Graph = None, p: float = 0.5, f: float = 0.5):
         """
         Init function of SituationQVoters. Creates graph and initial opinions.
-
         Parameters
         ----------
         n - number of Nodes in Barabashi-Albert graph, used if graph is None (default: None)
@@ -54,7 +52,6 @@ class SituationQVoters:
 
     def step(self) -> (np.ndarray, str, np.ndarray, any, bool, bool):
         """Move simulation by one step.
-
         Returns
         -------
         group - list of labels of 4 connected nodes
@@ -142,7 +139,6 @@ class SituationQVoters:
 
 def save_all_influences(model: SituationQVoters):
     """Saves to file and plot all types of influences that are implemented in model.
-
     Parameters
     ----------
     model - model to process
@@ -162,7 +158,6 @@ def save_all_influences(model: SituationQVoters):
 
 def __draw_graph(model, found, influence, neighbors, victim, opinion_before, opinion_after, step):
     """Draws a graph of model for given arguments.
-
     Parameters
     ----------
     model - model to process
