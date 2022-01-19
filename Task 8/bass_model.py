@@ -3,23 +3,40 @@ from matplotlib import pyplot as plt
 from numpy.random import rand
 
 GRAY_B = "#CCCCFF"
-
 GRAY_G = "#CCFFCC"
-
 GRAY_R = "#FFCCCC"
 
 
 class Person:
+    """Person that is interested in product. For details see https://en.wikipedia.org/wiki/Bass_diffusion_model."""
     def __init__(self):
+        """Init method for Person class."""
         self.state = False
 
-    def update(self, p, q, innovation_ratio, step):
+    def update(self, p: float, q: float, innovation_ratio: float, step: float):
+        """Switch state of person to true if it buys a product.
+        Chance that person will buy a product is step*(p+q*innovation_ratio).
+
+        Parameters
+        ----------
+        p - coefficient of innovation
+        q - coefficient of imitation
+        innovation_ratio - ration of adopters in model
+        step - step (in years) that simulation will be forwarded
+
+        Returns
+        -------
+        p - 1 if person bought the product as innovator during this year, 0 elsewhere;
+        >     value is divided by step to compensate step size
+        q - 1 if person bought the product as imitator during this year, 0 elsewhere
+        >     value is divided by step to compensate step size
+        """
         U = rand() / step
         if not self.state and U < p + q * innovation_ratio:
             self.state = True
             if U < p:
-                return 1, 0  # innovator
-            return 0, 1  # imitator
+                return 1/step, 0  # innovator
+            return 0, 1/step  # imitator
         return 0, 0  # nothing
 
     def __int__(self):
@@ -68,7 +85,7 @@ class Bass_Model:
             ps.append(p_new)
             qs.append(q_new)
             all_news.append(all_new)
-        return ratios, ts, ps, qs, all_news
+        return np.array(ratios), np.array(ts), np.array(ps), np.array(qs), np.array(all_news)
 
     def __repr__(self):
         return f'Bass_Model({self.p}, {self.q})'
@@ -81,12 +98,19 @@ def moving_average(data, steps):
 
 
 def test():
-    model = Bass_Model(0.03, 0.38, 10000)
+    model = Bass_Model(0.03, 0.38, 10000)  # instead of doing 10 MC probes we will use 10 times more agents.
     step = 0.1
     steps = 500
     MA_steps = 51
 
     ratios, ts, ps, qs, all_news = model.simulate(step, steps)
+    # compensate for 100 more agents
+    ratios /= 10
+    ts /= 10
+    ps /= 10
+    qs /= 10
+    all_news /= 10
+
     all_news_MA, ps_MA, qs_MA, ts_MA = calculate_MA_for_p_q_t_all(MA_steps, all_news, ps, qs, ts)
     plot_adopters(ratios, ts)
     plot_new_adopters(MA_steps, all_news, all_news_MA, ps, ps_MA, qs, qs_MA, ts, ts_MA)
