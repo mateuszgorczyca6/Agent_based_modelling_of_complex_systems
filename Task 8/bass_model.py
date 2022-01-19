@@ -2,6 +2,12 @@ import numpy as np
 from matplotlib import pyplot as plt
 from numpy.random import rand
 
+GRAY_B = "#CCCCFF"
+
+GRAY_G = "#CCFFCC"
+
+GRAY_R = "#FFCCCC"
+
 
 class Person:
     def __init__(self):
@@ -51,10 +57,10 @@ class Bass_Model:
     def __calculate_ratio(self):
         return self.persons.astype(int).mean()
 
-    def simulate(self, step):
+    def simulate(self, step, num_of_steps):
         ratios, ts, ps, qs, all_news = [], [], [], [], []
         t = 0
-        for _ in range(500):
+        for _ in range(num_of_steps):
             t += step
             ts.append(t)
             ratio, p_new, q_new, all_new = self.update(step)
@@ -74,37 +80,58 @@ def moving_average(data, steps):
     return data
 
 
-
-
-
-if __name__ == "__main__":
-    model = Bass_Model(0.01, 0.3, 10000)
+def test():
+    model = Bass_Model(0.03, 0.38, 10000)
     step = 0.1
-    ratios, ts, ps, qs, all_news = model.simulate(step)
-
+    steps = 500
     MA_steps = 51
-    ts_MA = moving_average(ts, MA_steps)
-    ratios_MA = moving_average(ratios, MA_steps)
-    ps_MA = moving_average(ps, MA_steps)
-    qs_MA = moving_average(qs, MA_steps)
-    all_news_MA = moving_average(all_news, MA_steps)
 
-    gray_r = "#FFCCCC"
-    gray_g = "#CCFFCC"
-    gray_b = "#CCCCFF"
+    ratios, ts, ps, qs, all_news = model.simulate(step, steps)
+    all_news_MA, ps_MA, qs_MA, ts_MA = calculate_MA_for_p_q_t_all(MA_steps, all_news, ps, qs, ts)
+    plot_adopters(ratios, ts)
+    plot_new_adopters(MA_steps, all_news, all_news_MA, ps, ps_MA, qs, qs_MA, ts, ts_MA)
 
+
+def plot_new_adopters(MA_steps, all_news, all_news_MA, ps, ps_MA, qs, qs_MA, ts, ts_MA, fname='new_adopters.pdf'):
     _, ax = plt.subplots(figsize=(12, 8))
-    plt.plot(ts, ratios, c='black')
-    plt.show()
 
-    _, ax = plt.subplots(figsize=(12, 8))
-    plt.plot(ts, ps, c=gray_r, label='innovators - raw')
-    plt.plot(ts, qs, c=gray_g, label='imitators - raw')
-    plt.plot(ts, all_news, c=gray_b, label='all new - raw')
-    plt.plot(ts_MA, ps_MA, c='r', label=f'innovators - MA({MA_steps})')
-    plt.plot(ts_MA, qs_MA, c='g', label=f'imitators - MA({MA_steps})')
-    plt.plot(ts_MA, all_news_MA, c='b', label=f'all new - MA({MA_steps})')
+    plt.plot(ts, ps, c=GRAY_R, label='Innovators - raw')
+    plt.plot(ts, qs, c=GRAY_G, label='Imitators - raw')
+    plt.plot(ts, all_news, c=GRAY_B, label='New adopters - raw')
+
+    plt.plot(ts_MA, ps_MA, c='r', label=f'Innovators - MA({MA_steps})')
+    plt.plot(ts_MA, qs_MA, c='g', label=f'Imitators - MA({MA_steps})')
+    plt.plot(ts_MA, all_news_MA, c='b', label=f'New adopters - MA({MA_steps})')
+
+    plt.title("Adopters", fontsize=24)
+    plt.xlabel("Year", fontsize=18)
+    plt.ylabel("Number of new adopters", fontsize=18)
+
     handles, labels = ax.get_legend_handles_labels()
     labels, handles = zip(*sorted(zip(labels, handles), key=lambda x: x[0]))
     plt.legend(handles, labels, fontsize=14)
+
+    plt.savefig(fname)
     plt.show()
+
+
+def plot_adopters(ratios, ts, fname='adopters.pdf'):
+    plt.subplots(figsize=(12, 8))
+    plt.plot(ts, ratios, c='black')
+    plt.title("Adopters", fontsize=24)
+    plt.xlabel("Year", fontsize=18)
+    plt.ylabel("Ratio of adopters", fontsize=18)
+    plt.savefig(fname)
+    plt.show()
+
+
+def calculate_MA_for_p_q_t_all(MA_steps, all_news, ps, qs, ts):
+    ts_MA = moving_average(ts, MA_steps)
+    ps_MA = moving_average(ps, MA_steps)
+    qs_MA = moving_average(qs, MA_steps)
+    all_news_MA = moving_average(all_news, MA_steps)
+    return all_news_MA, ps_MA, qs_MA, ts_MA
+
+
+if __name__ == "__main__":
+    test()
